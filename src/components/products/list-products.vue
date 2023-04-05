@@ -94,6 +94,8 @@
                   <label for="nameBasic" class="form-label">Name</label>
                   <input type="text" id="nameBasic" class="form-control" name="name" v-model="product.name"
                          placeholder="Enter Name"/>
+                  <span v-if="product.errors['name']" class="text-danger">{{ product.errors['name'] }}</span>
+
                 </div>
               </div>
               <div class="mb-3">
@@ -105,26 +107,31 @@
                     {{ category.name }}
                   </option>
                 </select>
+                <span v-if="product.errors['category.name']" class="text-danger">{{ product.errors['category.name'] }}</span>
               </div>
               <div class="col mb-3">
                 <label for="emailBasic" class="form-label">Slug </label>
                 <input type="text" id="emailBasic" class="form-control" name="slug" v-model="product.slug"
                        placeholder="Slug"/>
+                <span v-if="product.errors['slug']" class="text-danger">{{ product.errors['slug'] }}</span>
               </div>
               <div class="col mb-3">
                 <label for="emailBasic" class="form-label">Price </label>
                 <input type="text" id="emailBasic" class="form-control" name="price" v-model="product.price"
                        placeholder="Price"/>
+                <span v-if="product.errors['price']" class="text-danger">{{ product.errors['price'] }}</span>
               </div>
 
               <div class="col mb-3">
                 <label for="dobBasic" class="form-label">Description</label>
                 <textarea class="form-control" name="description" v-model="product.description"
                           id="exampleFormControlTextarea1" rows="3"></textarea>
+                <span v-if="product.errors['description']" class="text-danger">{{ product.errors['description'] }}</span>
               </div>
               <div class="col mb-3">
                 <label for="image" class="form-label">Image</label>
-                <input type="file" id="image" class="form-control" ref="file" name="image" accept="image/*" @change="uploadImage" />
+                <input type="file" id="image" class="form-control" ref="fileInput" name="image" accept="image/*" @change="uploadImage" />
+                <span v-if="product.errors['image']" class="text-danger">{{ product.errors['image'] }}</span>
               </div>
 
             </div>
@@ -176,7 +183,7 @@
               <td >{{ product.category.name }}</td>
 
 
-              <td>{{ product.slug }}</td>
+              <td  class="text-truncate" style="max-width: 300px;">{{ product.slug }}</td>
               <td class="text-truncate" style="max-width: 300px;">
                 {{ product.description }}
               </td>
@@ -192,7 +199,7 @@
                   })
                 }}
               </td>
-              <td v-if="product.updatedAt!=null">
+              <td class="text-success" v-if="product.updatedAt!=null">
                 {{
                   new Date(product.updatedAt).toLocaleString('fr-FR', {
                     timeZone: 'Europe/Paris',
@@ -204,7 +211,7 @@
                   })
                 }}
               </td>
-              <td v-else>
+              <td class="text-danger" v-else>
                 Not updated yet
               </td>
               <td>
@@ -299,34 +306,145 @@
 import ProductDataService from "@/services/ProductDataService";
 import * as XLSX from "xlsx";
 import CategoriesDataService from "@/services/CategoriesDataService";
+//import {useRoute} from "vue-router/dist/vue-router";
+import {reactive} from "vue";
+import { object, string} from "yup";
+import { ref } from 'vue'
 
 
 export default {
   name: "list-products",
+  setup() {
+    //const route = useRoute();
+    const fileInput = ref(null)
+    let product = reactive({
+      name: "",
+      slug: "",
+      description: "",
+      price: "",
+      image: null,
+      createdAt: "",
+      updatedAt: "",
+      deleted: false,
+      errors: {},
+      category: {
+        id: "",
+        name: "",
+        slug: "",
+        description: "",
+        createdAt: "",
+        updatedAt: "",
+        deleted: false,
+      }
+    });
+    const validationSchema = object().shape({
+      name: string().required().trim().min(4, "Name must be at least 4 characters"),
+      slug: string().required().trim(),
+      // comment faire pour valider que le choix de l'image est obligatoire
+     // image: mixed().required("Image is a required field"),
+      description: string().required().trim(),
+      price: string().required().trim(),
+      category: object().shape({
+        id: string().required().trim(),
+        name: string().required("Category Name is required field").trim(),
+        slug: string().required().trim(),
+        description: string().required().trim(),
+      })
+    });
+
+    function formatSlug(input) {
+      // Remplace les espaces par des tirets
+      let slug = input.trim().replace(/\s+/g, '-').toLowerCase();
+
+      // Supprime tous les caractères non alphanumériques et les tirets
+      slug = slug.replace(/[^a-z0-9-]/g, '');
+
+      return slug;
+    }
+
+    function  uploadImage() {
+
+      const file = fileInput.value ? fileInput.value.files[0] : null;
+      if (!file) {
+        console.log('No file selected');
+        return;
+      }
+      ProductDataService.uploadImage(file)
+          .then(response => {
+            console.log(response.data);
+            product.image = response.data.image;
+          })
+          .catch(e => {
+            console.log(e);
+          });
+    }
+
+    const saveProduct = () => {
+      validationSchema
+          .validate(product, {abortEarly: false})
+          .then(() => {
+            const now = new Date();
+            const offset = -120; // décalage horaire de 2 heures en minutes (Maroc UTC+1, donc offset=-60, moins 1 heure pour UTC+0, donc offset=-120)
+            const createdDate = new Date(now.getTime() + offset * 60 * 1000);
+
+            product.createdAt = createdDate.toISOString();
+            const data = {
+              name: product.name,
+              slug: formatSlug(product.slug),
+              description: product.description,
+              createdAt: product.createdAt,
+              updatedAt: product.updatedAt,
+              deleted: product.deleted,
+              price: product.price,
+              image: product.image,
+              category: {
+                id: product.category.id,
+                name: product.category.name,
+                slug: product.category.slug,
+                description: product.category.description,
+                createdAt: product.category.createdAt,
+                updatedAt: product.category.updatedAt,
+                deleted: product.category.deleted,
+              }
+            };
+
+            ProductDataService.createProduct(data)
+                .then(() => {
+                  console.log("Product added successfully.");
+                  location.reload();
+                })
+                .catch((e) => {
+                  console.log(e);
+                });
+          })
+          .catch((err) => {
+            if (err.inner) {
+              product.errors = err.inner.reduce((acc, { path, message }) => {
+                acc[path] = message;
+                return acc;
+              }, {});
+            } else {
+              console.log(err);
+            }
+          });
+
+    };
+    return {
+      product,
+      saveProduct,
+      formatSlug,
+      validationSchema,
+      uploadImage,
+      fileInput
+    };
+  },
+
   data() {
     return {
       productsAreNotDeleted: [],
       categoriesAreNotDeleted: [],
       products: [],
-      product: {
-        name: "",
-        slug: "",
-        description: "",
-        price: "",
-        image: "",
-        createdAt: "",
-        updatedAt: "",
-        deleted: false,
-        category: {
-          id: "",
-          name: "",
-          slug: "",
-          description: "",
-          createdAt: "",
-          updatedAt: "",
-          deleted: false,
-        }
-      },
+
       currentPage: 0,
       defaultSize: 10,
       totalPages: 0,
@@ -382,7 +500,7 @@ export default {
     },
 
     // Save product
-    saveProduct() {
+   /* saveProduct() {
       const now = new Date();
       const offset = -120; // décalage horaire de 2 heures en minutes (Maroc UTC+1, donc offset=-60, moins 1 heure pour UTC+0, donc offset=-120)
       const createdDate = new Date(now.getTime() + offset * 60 * 1000);
@@ -403,19 +521,9 @@ export default {
           .catch(e => {
             console.log(e);
           });
-    } ,
+    } ,*/
 
-    uploadImage() {
-      let file = this.$refs.file.files[0];
-      ProductDataService.uploadImage(file)
-          .then(response => {
-            console.log(response.data);
-            this.product.image = response.data;
-          })
-          .catch(e => {
-            console.log(e);
-          });
-    },
+
 
     // Update product
     updateProduct(id){
@@ -489,16 +597,7 @@ export default {
 
 
 
-    //Format Slug
-    formatSlug(input) {
-    // Remplace les espaces par des tirets
-    let slug = input.trim().replace(/\s+/g, '-').toLowerCase();
 
-    // Supprime tous les caractères non alphanumériques et les tirets
-    slug = slug.replace(/[^a-z0-9-]/g, '');
-
-      return slug;
-    },
 
 
 //pagination methods

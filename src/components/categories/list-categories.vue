@@ -42,13 +42,15 @@
                   Export
                 </button>
                 <ul class="dropdown-menu">
-                  <li @click="exportListToExcel(this.categories)" ><a class="dropdown-item text-primary" href="javascript:void(0);">
-                    <i class='bx bxs-file-doc p-2 text-success' ></i>
+                  <li @click="exportListToExcel(this.categories)"><a class="dropdown-item text-primary"
+                                                                     href="javascript:void(0);">
+                    <i class='bx bxs-file-doc p-2 text-success'></i>
 
                     Excel
                   </a></li>
-                  <li @click="exportListToExcel(this.categoriesNotDeleted)" ><a class="dropdown-item text-primary" href="javascript:void(0);">
-                    <i class='bx bxs-file-export p-2 text-success' ></i>
+                  <li @click="exportListToExcel(this.categoriesNotDeleted)"><a class="dropdown-item text-primary"
+                                                                               href="javascript:void(0);">
+                    <i class='bx bxs-file-export p-2 text-success'></i>
                     All records</a></li>
 
                 </ul>
@@ -79,7 +81,7 @@
         <div class="modal-dialog" role="document">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title" id="exampleModalLabel1">New Category</h5>
+              <h5 class="modal-title" id="exampleModalLabel1">New Category </h5>
               <button
                   type="button"
                   class="btn-close"
@@ -93,18 +95,21 @@
                   <label for="nameBasic" class="form-label">Name</label>
                   <input type="text" id="nameBasic" class="form-control" name="name" v-model="category.name"
                          placeholder="Enter Name"/>
+                 <span v-if="category.errors['name']" class="text-danger">{{ category.errors['name'] }}</span>
                 </div>
               </div>
               <div class="col mb-3">
                 <label for="emailBasic" class="form-label">Slug </label>
                 <input type="text" id="emailBasic" class="form-control" name="slug" v-model="category.slug"
                        placeholder="Slug"/>
+                           <span v-if="category.errors['slug']" class="text-danger">{{ category.errors["slug"] }}</span>
               </div>
 
               <div class="col mb-3">
                 <label for="dobBasic" class="form-label">Description</label>
                 <textarea class="form-control" name="description" v-model="category.description"
                           id="exampleFormControlTextarea1" rows="3"></textarea></div>
+               <span v-if="category.errors['description']" class="text-danger">{{ category.errors['description'] }}</span>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
@@ -125,8 +130,10 @@
 
             <thead>
             <tr>
-              <th class="text-primary"><i @click="triAscOfCategoriesByName" class="bx bxs-up-arrow-alt "></i> <i @click="triDescOfCategoriesByName" class="bx bxs-down-arrow-alt "></i>NAME</th>
-              <th class="text-primary"><strong>SLUG</strong> </th>
+              <th class="text-primary"><i @click="triAscOfCategoriesByName" class="bx bxs-up-arrow-alt "></i> <i
+                  @click="triDescOfCategoriesByName" class="bx bxs-down-arrow-alt "></i>NAME
+              </th>
+              <th class="text-primary"><strong>SLUG</strong></th>
               <th class="text-primary">DESCRIPTION</th>
               <th class="text-primary">CreatedAT</th>
               <th class="text-primary">UpdatedAT</th>
@@ -176,7 +183,8 @@
                   </button>
                   <div class="dropdown-menu">
 
-                    <a class="dropdown-item text-primary" @click="detailsCategory(category.id)" href="javascript:void(0);"><i
+                    <a class="dropdown-item text-primary" @click="detailsCategory(category.id)"
+                       href="javascript:void(0);"><i
                         class="bx bx-show-alt  p-2"></i>Details </a>
                     <a class="dropdown-item text-success" @click="updateDoctor(category.id)" href="javascript:void(0);"><i
                         class="bx bx-edit-alt    p-2"></i>Edit</a>
@@ -232,7 +240,7 @@
           ©
           2023
           , made with ❤️ by
-          <a href="javascript:void(0)"  class="footer-link fw-bolder">Amine BOUKRI</a>
+          <a href="javascript:void(0)" class="footer-link fw-bolder">Amine BOUKRI</a>
         </div>
 
       </div>
@@ -247,10 +255,84 @@
 <script>
 import CategoriesDataService from "@/services/CategoriesDataService";
 import * as XLSX from "xlsx";
-
+import {reactive} from "vue";
+import {object, string} from "yup";
 
 export default {
   name: "list-categories",
+
+  setup() {
+    const category = reactive({
+      id: null,
+      name: "",
+      slug: "",
+      description: "",
+      createdAt: "",
+      updatedAt: null,
+      deleted: false,
+      errors:{}
+    });
+
+    const validationSchema = object().shape({
+      name: string().required().trim().min(4, "Name must be at least 4 characters"),
+      slug: string().required().trim(),
+      description: string().required().trim(),
+    });
+
+    function formatSlug(input) {
+      // Remplace les espaces par des tirets
+      let slug = input.trim().replace(/\s+/g, '-').toLowerCase();
+
+      // Supprime tous les caractères non alphanumériques et les tirets
+      slug = slug.replace(/[^a-z0-9-]/g, '');
+
+      return slug;
+    }
+
+    const saveCategory = () => {
+      validationSchema
+          .validate(category, {abortEarly: false})
+          .then(() => {
+            const now = new Date();
+            const offset = -120; // décalage horaire de 2 heures en minutes (Maroc UTC+1, donc offset=-60, moins 1 heure pour UTC+0, donc offset=-120)
+            const createdDate = new Date(now.getTime() + offset * 60 * 1000);
+
+            category.createdAt = createdDate.toISOString();
+            const data = {
+              name: category.name,
+              slug: formatSlug(category.slug),
+              description: category.description,
+              createdAt: category.createdAt,
+              updatedAt: category.updatedAt,
+              deleted: category.deleted,
+            };
+
+            CategoriesDataService.createCategory(data)
+                .then(() => {
+                  console.log("Category added successfully.");
+                  location.reload();
+                  this.retrieveCategories();
+                })
+                .catch((e) => {
+                  console.log(e);
+                });
+          })
+       .catch((err) => {
+         if (err.inner) {
+           category.errors = err.inner.reduce((acc, { path, message }) => {
+             acc[path] = message;
+             return acc;
+           }, {});
+         } else {
+           console.log(err);
+         }
+       });
+
+    };
+
+    return {category, saveCategory, validationSchema};
+  },
+
   data() {
     return {
       categories: [],
@@ -260,26 +342,19 @@ export default {
       searchBySlug: "",
       totalCategories: 0,
       totalPages: 0,
-      category: {
-        id: null,
-        name: "",
-        slug: "",
-        description: "",
-        createdAt: "",
-        updatedAt: null,
-        deleted: false,
-      },
       submitted: false,
       show: false
     };
   },
+
   methods: {
+
+
     getListCategoriesNotDeleted() {
       CategoriesDataService.getCategoriesNotDeleted()
           .then((response) => {
             this.categoriesNotDeleted = response.data;
-            console.log("categoriesNotDeleted")
-            console.log("categoriesNotDeleted "+ this.categoriesNotDeleted)
+
           })
           .catch((e) => {
             console.log(e);
@@ -309,49 +384,16 @@ export default {
             console.log(e);
           });
     },
-    triAscOfCategoriesByName(){
-      this.categories=this.categories.sort((a,b)=>a.name.localeCompare(b.name))
+    triAscOfCategoriesByName() {
+      this.categories = this.categories.sort((a, b) => a.name.localeCompare(b.name))
     },
-    triDescOfCategoriesByName(){
-      this.categories=this.categories.sort((a,b)=>b.name.localeCompare(a.name))
+    triDescOfCategoriesByName() {
+      this.categories = this.categories.sort((a, b) => b.name.localeCompare(a.name))
     },
-    saveCategory() {
-      const now = new Date();
-      const offset = -120; // décalage horaire de 2 heures en minutes (Maroc UTC+1, donc offset=-60, moins 1 heure pour UTC+0, donc offset=-120)
-      const createdDate = new Date(now.getTime() + offset * 60 * 1000);
 
-      this.category.createdAt   = createdDate.toISOString();
-      var data = {
-        name: this.category.name,
-        slug: this.formatSlug(this.category.slug),
-        description: this.category.description,
-        deleted: this.category.deleted,
-        updatedAt: this.category.updatedAt,
-        createdAt: this.category.createdAt,
-      }
-      CategoriesDataService.createCategory(data)
-          .then(() => {
-
-            this.category.name = "";
-            this.category.slug = "";
-            this.category.description = "";
-            this.category.deleted = false;
-            this.category.updatedAt = "";
-            this.category.createdAt = "";
-
-
-            location.reload();
-
-
-            this.retrieveCategories();
-          })
-          .catch((e) => {
-            console.log(e);
-          });
-    },
 
     // Details product
-    detailsCategory(id){
+    detailsCategory(id) {
       this.$router.push({name: 'category-details', params: {id: id}});
     },
     deleteCategory(data) {
@@ -397,7 +439,7 @@ export default {
             hour: 'numeric',
             minute: 'numeric'
           })
-          ,"updated At": new Date(category.updatedAt).toLocaleString('fr-FR', {
+          , "updated At": new Date(category.updatedAt).toLocaleString('fr-FR', {
             timeZone: 'Europe/Paris',
             year: 'numeric',
             month: '2-digit',

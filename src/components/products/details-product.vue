@@ -13,7 +13,7 @@
             <div class="card-body">
               <div class="d-flex align-items-start align-items-sm-center gap-4">
                 <img
-                    src="/assets/assets/img/avatars/1.png"
+                    :src="'/assets/assets/img/'+product.image"
                     alt="user-avatar"
                     class="d-block rounded"
                     height="100"
@@ -117,6 +117,7 @@ export default {
         name: "",
         slug: "",
         price: "",
+        image: "",
         description: "",
         createdAt: "",
         updatedAt: "",

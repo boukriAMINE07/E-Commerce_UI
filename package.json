@@ -14,7 +14,8 @@
     "jspdf": "^2.5.1",
     "vue": "^3.2.13",
     "vue-router": "^4.1.6",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "yup": "^1.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",

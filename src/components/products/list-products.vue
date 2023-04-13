@@ -1,5 +1,5 @@
 <template>
-  <nav
+  <nav v-if="currentUser"
       class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
       id="layout-navbar"
   >
@@ -53,17 +53,53 @@
 
                 </ul>
               </div>
-
               <div class="btn-group">
                 <button type="button" data-bs-toggle="modal" data-bs-target="#basicModal"
                         class="btn btn-primary me-2">
-                 + Add New Record
+                  + Add New Record
                 </button>
               </div>
             </div>
 
           </h4>
         </li>
+        <!-- User -->
+        <li class="nav-item navbar-dropdown dropdown-user dropdown">
+          <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
+            <div class="avatar avatar-online">
+              <img src="/assets/assets/img/avatars/1.png" alt class="w-px-40 h-auto rounded-circle" />
+            </div>
+          </a>
+          <ul  class="dropdown-menu dropdown-menu-end">
+            <li>
+              <a class="dropdown-item" href="#">
+                <div class="d-flex">
+                  <div class="flex-shrink-0 me-3">
+                    <div class="avatar avatar-online">
+                      <img src="/assets/assets/img/avatars/1.png" alt class="w-px-40 h-auto rounded-circle" />
+                    </div>
+                  </div>
+                  <div class="flex-grow-1">
+                    <span class="fw-semibold d-block">{{currentUser.username}}</span>
+                    <small v-for="role in currentUser.roles" :key="role" class="text-muted">
+                      <p v-if="role==='ROLE_ADMIN'">Admin</p>
+                      <p v-if="role==='ROLE_USER'">User</p>
+                    </small>
+                  </div>
+                </div>
+              </a>
+            </li>
+
+
+            <li>
+              <a class="dropdown-item" @click.prevent="logOut">
+                <i class="bx bx-power-off me-2"></i>
+                <span class="align-middle">Log Out</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+        <!--/ User -->
       </ul>
       <!-- Button trigger modal -->
 
@@ -340,8 +376,6 @@ export default {
     const validationSchema = object().shape({
       name: string().required().trim().min(4, "Name must be at least 4 characters"),
       slug: string().required().trim(),
-      // comment faire pour valider que le choix de l'image est obligatoire
-     // image: mixed().required("Image is a required field"),
       description: string().required().trim(),
       price: string().required().trim(),
       category: object().shape({
@@ -453,6 +487,11 @@ export default {
 
     };
   },
+  computed:{
+    currentUser() {
+      return this.$store.state.auth.user;
+    },
+  },
   methods: {
     // Get all products
     getAllProductsAreNotDeleted() {
@@ -464,12 +503,14 @@ export default {
             console.log(e);
           });
     },
+    logOut() {
+      this.$store.dispatch('auth/logout');
+      this.$router.push('/login');
+    },
     getListCategoriesNotDeleted() {
       CategoriesDataService.getCategoriesNotDeleted()
           .then((response) => {
             this.categoriesAreNotDeleted = response.data;
-            console.log("categoriesAreNotDeleted")
-            console.log("categoriesAreNotDeleted " + this.categoriesAreNotDeleted)
           })
           .catch((e) => {
             console.log(e);
@@ -619,6 +660,9 @@ export default {
     this.retrieveProducts();
     this.getAllProductsAreNotDeleted();
     this.getListCategoriesNotDeleted();
+    if (this.currentUser==null || !this.currentUser.roles.includes("ROLE_ADMIN")) {
+      this.$router.push('/login');
+    }
   }
 }
 </script>

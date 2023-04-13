@@ -1,5 +1,5 @@
 <template>
-  <nav
+  <nav v-if="currentUser"
       class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
       id="layout-navbar"
   >
@@ -66,6 +66,43 @@
 
           </h4>
         </li>
+        <!-- User -->
+        <li class="nav-item navbar-dropdown dropdown-user dropdown">
+          <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
+            <div class="avatar avatar-online">
+              <img src="/assets/assets/img/avatars/1.png" alt class="w-px-40 h-auto rounded-circle" />
+            </div>
+          </a>
+          <ul  class="dropdown-menu dropdown-menu-end">
+            <li>
+              <a class="dropdown-item" href="#">
+                <div class="d-flex">
+                  <div class="flex-shrink-0 me-3">
+                    <div class="avatar avatar-online">
+                      <img src="/assets/assets/img/avatars/1.png" alt class="w-px-40 h-auto rounded-circle" />
+                    </div>
+                  </div>
+                  <div class="flex-grow-1">
+                    <span class="fw-semibold d-block">{{currentUser.username}}</span>
+                    <small v-for="role in currentUser.roles" :key="role" class="text-muted">
+                      <p v-if="role==='ROLE_ADMIN'">Admin</p>
+                      <p v-if="role==='ROLE_USER'">User</p>
+                    </small>
+                  </div>
+                </div>
+              </a>
+            </li>
+
+
+            <li>
+              <a class="dropdown-item" @click.prevent="logOut">
+                <i class="bx bx-power-off me-2"></i>
+                <span class="align-middle">Log Out</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+        <!--/ User -->
       </ul>      <!-- Button trigger modal -->
 
 
@@ -142,7 +179,7 @@
             </tr>
             </thead>
             <tbody>
-            <tr v-for="category in categories" :key="category.id">
+            <tr v-for="category in categories" :key="category.id" @dblclick="detailsCategory(category.id)">
               <td><i class="fab fa-angular fa-lg text-danger me-3"></i> <strong>{{ category.name }}</strong></td>
               <td>{{ category.slug }}</td>
               <td class="text-truncate" style="max-width: 300px;">
@@ -468,12 +505,24 @@ export default {
 
       return slug;
     },
+    logOut() {
+      this.$store.dispatch('auth/logout');
+      this.$router.push('/login');
+    },
 
 
+  },
+  computed:{
+    currentUser() {
+      return this.$store.state.auth.user;
+    },
   },
   mounted() {
     this.retrieveCategories();
     this.getListCategoriesNotDeleted();
+    if (this.currentUser==null || !this.currentUser.roles.includes("ROLE_ADMIN")) {
+      this.$router.push('/login');
+    }
   },
 
 }

@@ -346,6 +346,8 @@ import CategoriesDataService from "@/services/CategoriesDataService";
 import {reactive} from "vue";
 import { object, string} from "yup";
 import { ref } from 'vue'
+import EventBus from "../../common/EventBus";
+
 
 
 export default {
@@ -525,6 +527,7 @@ export default {
           })
           .catch(e => {
             console.log(e);
+
           });
     },
     retrieveProductsBySlug() {
@@ -656,6 +659,10 @@ export default {
       this.retrieveProducts();
     }
   },
+  beforeUnmount() {
+    EventBus.remove("logout");
+  },
+
   mounted() {
     this.retrieveProducts();
     this.getAllProductsAreNotDeleted();
@@ -663,6 +670,11 @@ export default {
     if (this.currentUser==null || !this.currentUser.roles.includes("ROLE_ADMIN")) {
       this.$router.push('/login');
     }
+      EventBus.on("logout", () => {
+        this.logOut();
+      });
+
+
   }
 }
 </script>

@@ -105,7 +105,7 @@ name: "Header-vue",
   },
   mounted() {
 
-    if (this.currentUser==null || !this.currentUser.roles.includes("ROLE_ADMIN")) {
+    if (this.currentUser==null || !this.currentUser.roles.includes("ROLE_ADMIN") || this.currentUser.token==null) {
       this.$router.push('/login');
     }
   }

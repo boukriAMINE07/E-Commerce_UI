@@ -18,7 +18,6 @@ class CategoriesDataService{
         return http.post("/api/categories", data);
     }
     updateCategory(id, data){
-
         return http.put(`/api/categories/${id}`, data);
     }
     deleteCategory(id,data){

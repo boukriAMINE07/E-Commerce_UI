@@ -482,7 +482,7 @@ export default {
       products: [],
 
       currentPage: 0,
-      defaultSize: 10,
+      defaultSize: 6,
       totalPages: 0,
       totalElements: 0,
       searchBySlug: "",

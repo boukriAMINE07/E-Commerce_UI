@@ -348,7 +348,7 @@ export default {
                 .then(() => {
                   console.log("Category added successfully.");
                   location.reload();
-                  this.retrieveCategories();
+
                 })
                 .catch((e) => {
                   console.log(e);
@@ -375,7 +375,7 @@ export default {
       categories: [],
       categoriesNotDeleted: [],
       currentPage: 0,
-      defaultSize: 8,
+      defaultSize: 10,
       searchBySlug: "",
       totalCategories: 0,
       totalPages: 0,
@@ -402,6 +402,7 @@ export default {
       CategoriesDataService.getCategories(this.currentPage, this.defaultSize)
           .then((response) => {
             this.categories = response.data.categories;
+            console.log(response.data.categories)
             this.totalCategories = response.data.totalItems;
             this.totalPages = response.data.totalPages;
           })

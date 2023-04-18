@@ -24,11 +24,10 @@
         <div class="col-xl">
           <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">Category   {{category}}</h5>
+              <h5 class="mb-0">Category   </h5>
             </div>
             <div class="card-body">
               <form>
-
 
                   <div class="row">
                     <div class="col mb-3">
@@ -154,7 +153,6 @@ export default {
             const updatedDate = new Date(now.getTime() + offset * 60 * 1000);
             category.updatedAt   = updatedDate.toISOString();
             const data = {
-              id: category.id,
               name: category.name,
               slug: formatSlug(category.slug),
               description: category.description,
@@ -163,7 +161,7 @@ export default {
               deleted: category.deleted,
             };
 
-            CategoriesDataService.updateCategory(data.id, data)
+            CategoriesDataService.updateCategory(route.params.id, data)
                 .then(() => {
                   console.log("Category Update successfully.");
 
